@@ -1,4 +1,15 @@
-CP = ../../build/libs/ssj-3.1.1.jar:.
+CP = ~/src/java/ssj/build/libs/ssj-3.1.1.jar:.:classes
+
+testSimPerson:
+	javac -cp $(CP) SimPerson.java
+	javac -cp $(CP) TestSimPerson.java
+	time java -cp $(CP) TestSimPerson
+
+testSimPerson2:
+	javac -cp $(CP) SimPerson.java
+	omp4j -d classes -cp $(CP) TestSimPerson2.java
+	time java -cp $(CP) TestSimPerson2
+
 
 test:
 	javac -cp $(CP) TestSimeventsSim.java
@@ -9,3 +20,8 @@ threaded:
 	./omp4j -d classes -cp $(CP) -v TestSimeventsSim.java
 	cd classes
 	time java -cp $(CP) TestSimeventsSim
+
+short:
+	./omp4j -d classes -cp $(CP) -v Testomp4j.java
+	cd classes
+	time java Testomp4j
