@@ -1,0 +1,1 @@
+java -jar omp4j-1.2.jar $*
