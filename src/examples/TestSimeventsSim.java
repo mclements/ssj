@@ -3,7 +3,7 @@ import umontreal.ssj.rng.*;
 import umontreal.ssj.randvar.*;
 import umontreal.ssj.stat.*;
 public class TestSimeventsSim {
-	class Person {
+	static class Person {
 		MRG32k3a rng = new MRG32k3a();
 		Simulator s = new Simulator();
 		Tally lifetime = new Tally();
@@ -48,17 +48,12 @@ public class TestSimeventsSim {
 	}
 	public static void main (String[] args) {
 		Tally lifetime = new Tally();
-		// omp parallel for public(lifetime)
 		for (int strat=0; strat<10; ++strat) {
-			System.out.println(OMP4J_THREAD_NUM);
 			Person person = new Person();
 			for (int id=0; id<1000000; ++id) {
 				person.run();
 			}
-			// omp critical
-			{
-				lifetime.add(person.lifetime);
-			}
+			lifetime.add(person.lifetime);
 		}
 		System.out.println(lifetime.report());
 		System.out.println(lifetime.formatCINormal(0.95));

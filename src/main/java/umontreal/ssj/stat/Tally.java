@@ -583,7 +583,7 @@ public String shortReport() {
    public void add (Tally x) {
       if (x.minValue < minValue) minValue = x.minValue;
       if (x.maxValue > maxValue) maxValue = x.maxValue;
-      double p = numObs/(numObs + x.numObs*1.0);
+      double p = 1.0*numObs/(numObs + x.numObs);
       double mean = p*curAverage + (1-p)*x.curAverage;
       curSum2 = curSum2 + 2*(curAverage - mean)*curAverage*numObs-(curAverage-mean)*numObs +
          x.curSum2 + 2*(x.curAverage - mean)*x.curAverage*x.numObs-(x.curAverage-mean)*x.numObs;
