@@ -8,16 +8,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.List;
 class TestSimPerson {
-	public static void main2 (String[] args) {
+	public static void main (String[] args) {
 		Tally lifetime = new Tally();
-		// omp parallel for public(lifetime)
+		SimPerson person = new SimPerson();
+		// omp parallel for public(lifetime) private(person)
 		for (int j=0; j<2; ++j) {
-			SimPerson person;
-			// omp critical
-			{
-				person = new SimPerson();
-			}
-			synchronized(person.s) {
+			synchronized(person) {
 			for (int id=0; id<1000000; ++id) {
 				person.run();
 				}
@@ -31,53 +27,40 @@ class TestSimPerson {
 		System.out.println(lifetime.formatCINormal(0.95));
 		System.out.println("Expected life-time: "+new SimPerson().expectedLifetime());
 	}
-	public static void main3 (String[] args) {
-		ExecutorService executor = Executors.newFixedThreadPool(2);
-		Tally lifetime = new Tally();
-		List<Future<Tally>> list = new ArrayList<Future<Tally>>();
-		for (int j=0; j<2; ++j) {
-			Callable<Tally> worker = new SimPeople();
-			Future<Tally> submit = executor.submit(worker);
-			list.add(submit);
-		}
-		for (Future<Tally> future : list) {
-			try {
-				lifetime.add(future.get());
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				e.printStackTrace();
-			}
-		}
-		System.out.println(lifetime.report());
-		System.out.println(lifetime.formatCINormal(0.95));
-		System.out.println("Expected life-time: "+new SimPerson().expectedLifetime());
-		executor.shutdown();
-	}
-
-	public static void main (String[] args) {
-		ExecutorService executor = Executors.newFixedThreadPool(2);
+	public static void main2 (String[] args) throws InterruptedException {
+		int NTHREADS = 2;
+		ExecutorService es = Executors.newFixedThreadPool(NTHREADS);
 		class OMPContext {
 			public Tally local_lifetime;
+			public SimPerson local_person[];
 		}
 		Tally lifetime = new Tally();
 		final OMPContext ompContext = new OMPContext();
 		ompContext.local_lifetime = lifetime;
-		for (int j=0; j<2; ++j) {
-			executor.execute(new Runnable() {
+		ompContext.local_person = new SimPerson[NTHREADS];
+		for (int j=0; j<NTHREADS; ++j) {
+			ompContext.local_person[j] = new SimPerson();
+		}
+		for (int j=0; j<NTHREADS; ++j) {
+			final int jj = j;
+			es.execute(new Runnable() {
 					public void run() {
-						SimPerson person = new SimPerson();
-						for (int id=0; id<1000000; ++id) {
-							person.run();
+						synchronized(ompContext.local_person[jj]) {
+							for (int id=0; id<1000000; ++id) {
+								ompContext.local_person[jj].run();
+							}
 						}
 						synchronized(ompContext) {
-							ompContext.local_lifetime.add(person.lifetime);
+							ompContext.local_lifetime.add(ompContext.local_person[jj].lifetime);
 						}
 					}
 				});
 		}
-		executor.shutdown();
-		executor.awaitTermination(10, TimeUnit.SECONDS);
+		es.shutdownNow();
+		if (!es.awaitTermination(10, TimeUnit.SECONDS)) {
+			System.out.println("Still waiting...");
+			System.exit(0);
+		}
 		System.out.println(lifetime.report());
 		System.out.println(lifetime.formatCINormal(0.95));
 		System.out.println("Expected life-time: "+new SimPerson().expectedLifetime());
