@@ -9,7 +9,7 @@ testSimPerson: SimPerson.class  SimPeople.class TestSimPerson.class
 	time java -cp $(CP) TestSimPerson
 
 testSimPerson2: SimPerson.class SimPeople.class TestSimPerson.class
-	./omp4j -d classes -cp $(CP) -v TestSimPerson2.java
+	./omp4j -d classes -cp $(CP) TestSimPerson2.java
 	time java -cp $(CP2) TestSimPerson
 
 sources: TestSimPerson2.java

@@ -8,11 +8,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.List;
 class TestSimPerson {
-	public static void main (String[] args) {
+	public static void main3 (String[] args) {
 		Tally lifetime = new Tally();
-		SimPerson person = new SimPerson();
-		// omp parallel for public(lifetime) private(person)
+		// omp parallel for public(lifetime)
 		for (int j=0; j<2; ++j) {
+			SimPerson person = new SimPerson();
 			synchronized(person) {
 			for (int id=0; id<1000000; ++id) {
 				person.run();
@@ -30,28 +30,28 @@ class TestSimPerson {
 	public static void main2 (String[] args) throws InterruptedException {
 		int NTHREADS = 2;
 		ExecutorService es = Executors.newFixedThreadPool(NTHREADS);
-		class OMPContext {
+		class Context {
 			public Tally local_lifetime;
 			public SimPerson local_person[];
 		}
 		Tally lifetime = new Tally();
-		final OMPContext ompContext = new OMPContext();
-		ompContext.local_lifetime = lifetime;
-		ompContext.local_person = new SimPerson[NTHREADS];
+		final Context context = new Context();
+		context.local_lifetime = lifetime;
+		context.local_person = new SimPerson[NTHREADS];
 		for (int j=0; j<NTHREADS; ++j) {
-			ompContext.local_person[j] = new SimPerson();
+			context.local_person[j] = new SimPerson();
 		}
 		for (int j=0; j<NTHREADS; ++j) {
 			final int jj = j;
 			es.execute(new Runnable() {
 					public void run() {
-						synchronized(ompContext.local_person[jj]) {
+						synchronized(context.local_person[jj]) {
 							for (int id=0; id<1000000; ++id) {
-								ompContext.local_person[jj].run();
+								context.local_person[jj].run();
 							}
 						}
-						synchronized(ompContext) {
-							ompContext.local_lifetime.add(ompContext.local_person[jj].lifetime);
+						synchronized(context) {
+							context.local_lifetime.add(context.local_person[jj].lifetime);
 						}
 					}
 				});
@@ -65,4 +65,40 @@ class TestSimPerson {
 		System.out.println(lifetime.formatCINormal(0.95));
 		System.out.println("Expected life-time: "+new SimPerson().expectedLifetime());
 	}
+
+	public static void main (String[] args) throws InterruptedException {
+		int NTHREADS = 2;
+		ExecutorService es = Executors.newFixedThreadPool(NTHREADS);
+		class Context {
+			public Tally local_lifetime;
+		}
+		Tally lifetime = new Tally();
+		final Context context = new Context();
+		context.local_lifetime = lifetime;
+		for (int j=0; j<NTHREADS; ++j) {
+			es.execute(new Runnable() {
+					public void run() {
+						SimPerson person = new SimPerson();
+						synchronized(person.s) {
+							for (int id=0; id<1000000; ++id) {
+								person.run();
+							}
+						}
+						synchronized(context) {
+							context.local_lifetime.add(person.lifetime);
+						}
+					}
+				});
+		}
+		es.shutdownNow();
+		if (!es.awaitTermination(10, TimeUnit.SECONDS)) {
+			System.out.println("Still waiting...");
+			System.exit(0);
+		}
+		System.out.println(lifetime.report());
+		System.out.println(lifetime.formatCINormal(0.95));
+		System.out.println("Expected life-time: "+new SimPerson().expectedLifetime());
+	}
+
+
 }
