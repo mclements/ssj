@@ -2,8 +2,8 @@ import umontreal.ssj.simevents.*;
 import umontreal.ssj.rng.*;
 import umontreal.ssj.randvar.*;
 import umontreal.ssj.stat.*;
+import java.util.concurrent.ThreadLocalRandom;
 class SimPerson implements Runnable {
-	MRG32k3a rng;
 	Simulator s;
 	Tally lifetime;
 	double cancerIncRate=1/60.0,
@@ -11,22 +11,23 @@ class SimPerson implements Runnable {
 		excessRate=1/20.0,
 		pSusceptible=1.0;
 	SimPerson() {
-		rng = new MRG32k3a();
 		s = new Simulator();
 		lifetime = new Tally();
-	}		
+	}
+	double exponential(double rate) {
+		return -Math.log(ThreadLocalRandom.current().nextDouble())/rate;
+	}
 	public void run () {
 		s.init(); 
-		new OtherDeath().schedule(ExponentialGen.nextDouble(rng, otherDeathRate));
-		if (rng.nextDouble() < pSusceptible)
-			new CancerInc().schedule(ExponentialGen.nextDouble(rng,cancerIncRate));
+		new OtherDeath().schedule(exponential(otherDeathRate));
+		if (ThreadLocalRandom.current().nextDouble() < pSusceptible)
+			new CancerInc().schedule(exponential(cancerIncRate));
 		s.start();
-		rng.resetNextSubstream();
 	}
 	class CancerInc extends Event {
 		CancerInc() { super(s); }
 		public void actions() {
-			new CancerDeath().schedule(ExponentialGen.nextDouble(rng,excessRate));
+			new CancerDeath().schedule(exponential(excessRate));
 		}
 	}
 	class CancerDeath extends Event {
